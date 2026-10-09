@@ -1,3 +1,23 @@
+/**
+ * ====================================================================================================
+ * @file main.cpp
+ * @brief Dual-Core ESP32 Smart Grandfather Clock Firmware
+ * @author saptarshi2007 (https://github.com/saptarshidas578)
+ * 
+ * @details
+ * Combines traditional horological mechanisms with modern embedded systems architecture:
+ * - Core 0 (FreeRTOS Task): Real-time I2S digital audio synthesis and Westminster chime playback.
+ * - Core 1 (Main Loop): FastLED ring animation, color-palette scheduling, and DS1307 I2C RTC polling.
+ * - Dual Time Sync: Network Time Protocol (NTP) over 2.4 GHz Wi-Fi with DS1307 battery-backed fallback.
+ * 
+ * Hardware Peripherals:
+ * - ESP32 DevKit (Xtensa dual-core 32-bit LX6 @ 240 MHz)
+ * - WS2812B Addressable LED Ring (84 LEDs) on GPIO 5
+ * - I2S Audio DAC (e.g. MAX98357A / PCM5102A): WS=25, BCK=26, DOUT=27
+ * - DS1307 RTC (I2C: SDA=GPIO 21, SCL=GPIO 22)
+ * ====================================================================================================
+ */
+
 #include <Arduino.h>
 
 // --- CORE FILE SYSTEMS ---
@@ -70,6 +90,11 @@ volatile int ntpYear, ntpMonth, ntpDay, ntpHour, ntpMinute, ntpSecond;
 // ==============================
 
 // UNINTERRUPTED RAINBOW BOOT SEQUENCE
+/**
+ * @brief Performs blocking initial Wi-Fi connection and NTP time synchronization during boot.
+ * @details Displays a rotating rainbow spinner animation across the LED ring while waiting.
+ *          If network connection fails within the 15-second timeout, falls back to hardware DS1307 RTC.
+ */
 void initialBootSync() {
     Serial.print("\nAttempting Initial WiFi Boot Sync: ");
     Serial.println(ssid);
@@ -137,6 +162,11 @@ void initialBootSync() {
 }
 
 // INVISIBLE BACKGROUND SYNC (Core 0)
+/**
+ * @brief Non-blocking background NTP resynchronization worker executed periodically.
+ * @details Attempts Wi-Fi reconnection and queries the NTP time server without blocking
+ *          LED animations or timekeeping on the primary execution core.
+ */
 void handleBackgroundSyncCore0() {
     if (sharedUnixTime == 0) return; 
 
@@ -187,6 +217,11 @@ void handleBackgroundSyncCore0() {
 // ==============================
 // 4. AUDIO SYSTEM (Core 0)
 // ==============================
+/**
+ * @brief Initializes the ESP32 hardware I2S peripheral for digital audio streaming.
+ * @details Configures sample rate (44.1 kHz), 16-bit depth, standard I2S master mode,
+ *          and maps peripheral lines to GPIO 25 (WS), GPIO 26 (BCK), and GPIO 27 (DOUT).
+ */
 void setupI2S() {
     i2s_config_t i2s_config = {
         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
@@ -211,6 +246,12 @@ void setupI2S() {
     i2s_zero_dma_buffer(I2S_NUM_0);
 }
 
+/**
+ * @brief Generates and transmits a real-time sinusoidal audio waveform over I2S.
+ * @param frequency Target audio pitch in Hertz (Hz).
+ * @param durationMs Tone duration in milliseconds.
+ * @details Uses direct digital synthesis (DDS) to write 16-bit stereo PCM samples to the I2S DMA buffer.
+ */
 void playTone(float frequency, uint32_t durationMs) {
     if (frequency == 0.0f) {
         vTaskDelay(durationMs / portTICK_PERIOD_MS); 
@@ -258,6 +299,11 @@ void playTone(float frequency, uint32_t durationMs) {
     i2s_zero_dma_buffer(I2S_NUM_0);
 }
 
+/**
+ * @brief Decodes and plays a Ring Tone Text Transfer Language (RTTTL) string via I2S.
+ * @param p Pointer to the null-terminated RTTTL melody specification string.
+ * @details Parses header parameters (default duration, octave, BPM) and note tokens.
+ */
 void playRTTTL(const char *p) {
     while(*p && *p != ':') p++; if(!*p) return; p++;
     int default_dur = 4, default_oct = 6, bpm = 63; int num;
@@ -291,6 +337,12 @@ void playRTTTL(const char *p) {
     }
 }
 
+/**
+ * @brief Dedicated FreeRTOS worker task pinned to ESP32 Core 0 for audio synthesis.
+ * @param pvParameters FreeRTOS task argument pointer (unused).
+ * @details Polls audio trigger flags (quarterChimesToPlay, hourStrikesToPlay) and plays
+ *          Westminster chime melodies and hour gongs without causing audio stuttering or jitter.
+ */
 void audioTask(void *pvParameters) {
     setupI2S(); 
     for (;;) {
@@ -327,6 +379,12 @@ void audioTask(void *pvParameters) {
 // ==============================
 
 // --- NIGHT MODE LOGIC ---
+/**
+ * @brief Evaluates whether audio chimes should be silenced based on schedule (e.g. night hours).
+ * @param currentHour 24-hour format clock hour (0-23).
+ * @param currentMinute Clock minute (0-59).
+ * @return true if chime output is suppressed, false if permitted.
+ */
 bool isAudioMuted(int currentHour, int currentMinute) {
     if (currentHour == 23 && currentMinute > 0) return true;
     if (currentHour >= 0 && currentHour < 6) return true;
@@ -334,6 +392,11 @@ bool isAudioMuted(int currentHour, int currentMinute) {
     return false;
 }
 
+/**
+ * @brief Updates clock hand and dial marker color palettes based on the time of day.
+ * @param hour24 Current hour in 24-hour format.
+ * @details Shifts colors between daytime, twilight, and nighttime ambient palettes.
+ */
 void updateColorPalette(int hour24) {
     if (hour24 >= 0 && hour24 < 6) { 
         MARKER_COLOR = CRGB(0x88BBFF); HOUR_COLOR = CRGB(0x8800FF); MINUTE_COLOR = CRGB(0x00FFCC); SECOND_COLOR = CRGB(0xFF00AA);
@@ -351,6 +414,11 @@ int getPhysicalIndex(int block, int logicalIndex) {
     else return (block * 7) + (6 - logicalIndex);
 }
 
+/**
+ * @brief Hardware initialization lifecycle hook executed on boot.
+ * @details Sets up Serial, I2C, FastLED, DS1307 RTC, performs initial NTP boot sync,
+ *          and spawns the dedicated audio synthesis FreeRTOS task on Core 0.
+ */
 void setup() {
     Serial.begin(115200);
 
@@ -371,6 +439,11 @@ void setup() {
     Serial.println("\n⌚ Smart Clock is Live! Ticking started...\n");
 }
 
+/**
+ * @brief Primary superloop executed continuously on Core 1.
+ * @details Reads current time from DS1307 RTC, renders hands and markers to the 84-LED ring,
+ *          triggers Westminster chimes on quarter hours, and monitors background NTP synchronization.
+ */
 void loop() {
     DateTime now = rtc.now();
     sharedUnixTime = now.unixtime(); 
