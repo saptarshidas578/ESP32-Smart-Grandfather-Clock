@@ -15,3 +15,11 @@
 - 5V DC supply (min 2.0A) connected to VBUS/5V and GND.
 - 1000 µF electrolytic capacitor recommended across 5V and GND near LED strip power input to buffer current spikes.
 - 330-470 Ω series resistor on GPIO 5 data line to protect first WS2812B LED.
+
+## Hardware Assembly & Prototype Verification
+
+<p align="center">
+  <img src="images/internal_electronics_speakers.jpg" alt="Internal Chassis Layout and Dual Speakers" width="550"/>
+  <br>
+  <em>Figure: Physical chassis interior demonstrating breadboard layout for ESP32, DS3231 RTC, AC-DC power supply module, and dual OMIGA TCL stereo chime speakers.</em>
+</p>
