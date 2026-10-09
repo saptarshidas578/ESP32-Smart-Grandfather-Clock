@@ -12,6 +12,12 @@ A dual-core ESP32 embedded horological system featuring real-time I2S digital au
 
 The ESP32 Smart Grandfather Clock reimagines classic grandfather clock timekeeping using modern microcontroller architecture. Traditional mechanical chimes and escapements are implemented as digital real-time tasks: quarter-hour Westminster chimes and hour gong strikes are synthesized over I2S and isolated on FreeRTOS Core 0 to prevent audio underrun. An 84-pixel WS2812B LED ring on Core 1 displays dial indices, rotating hands, and time-of-day color transitions without visual stutter. Time accuracy is maintained through redundant timekeeping: Network Time Protocol (NTP) synchronization over 2.4 GHz Wi-Fi automatically sets the system time, with automatic fallback to a battery-backed DS1307 real-time clock during network outages.
 
+<p align="center">
+  <img src="docs/images/clock_face_illumination.jpg" alt="ESP32 Smart Grandfather Clock Radial LED Face" width="500"/>
+  <br>
+  <em><strong>Figure 1:</strong> Illuminated radial horological clock display in operation, showcasing 12 outer warm-amber hour indices and color-differentiated radial arms for hour, minute, and second tracking.</em>
+</p>
+
 ---
 
 ## Features
@@ -26,6 +32,12 @@ The ESP32 Smart Grandfather Clock reimagines classic grandfather clock timekeepi
 ---
 
 ## Hardware Architecture & Pin Mapping
+
+<p align="center">
+  <img src="docs/images/internal_electronics_speakers.jpg" alt="ESP32 Grandfather Clock Internal Electronics & Dual Speakers" width="550"/>
+  <br>
+  <em><strong>Figure 2:</strong> Internal chassis cavity featuring ESP32 DevKit, battery-backed DS3231/DS1307 RTC, regulated AC-DC step-down power converter, and dual 8Ω 10W acoustic chime speakers for Westminster melodies and hour strikes.</em>
+</p>
 
 ### Component Requirements
 - **Microcontroller:** ESP32 DevKit V1 (Xtensa dual-core 32-bit LX6 @ 240 MHz)
@@ -171,5 +183,4 @@ const char *password = "YOUR_WIFI_PASSWORD";
 
 ## License
 
-Recommended: [MIT License](https://opensource.org/licenses/MIT).  
-*TODO(author): confirm license selection.*
+This project is licensed under the [MIT License](LICENSE).
